@@ -52,7 +52,11 @@
      (lambda (httpc header my-data)
        (with-output-to-temp-buffer "*librato*"
          (switch-to-buffer-other-window "*librato*")
-         (mapcar #'sumo-print-collector (cdr (assoc 'collectors (json-read-from-string my-data))))))
+         (mapcar #'librato-print-message (json-read-from-string my-data))))
+     ;;(mapcar #'librato-print-metrics (cdr (assoc 'collectors (json-read-from-string my-data))))))
      :url uri
      :extra-headers data
      )))
+
+(defun librato-print-message (element)
+  (message "SSS: %s" element) )
