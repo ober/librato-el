@@ -148,12 +148,12 @@
 
 	(insert (format " measure_time:%s delta:%s" measure_time delta))
 
-	(nconc deltas (list delta)))
+	(nconc deltas (list delta))
 	(setq i (1+ i))))
 	;;(insert "||| size:%s type:%s raw:%s" (length data-line) (type-of data-line) data-line )
 	;;(insert (format "%s" (apply 'spark data-line)))
 	(insert (format "%s" data-line))
-      (princ "\n")))
+	(princ "\n")))
 
 
 (defun librato-print-message (element)
