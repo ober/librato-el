@@ -168,7 +168,6 @@
       'mouse-face 'highlight))))
 
 (defun spark (&rest args)
-  (message "WTF: args:%s raw:%s" (type-of args) args)
   (let* ((minimum (apply #'min args))
 	 (maximum (apply #'max args))
 	 (range (float (- maximum minimum)))
