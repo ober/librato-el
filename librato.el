@@ -79,10 +79,6 @@
      :extra-headers data
      )))
 
-;; (defun librato-get-dashboards ()
-;;   (let ((uri "https://metrics-api.librato.com/v1/dashboards"))
-;;     (librato-get-generic uri function
-
 (defun librato-get-dashboards (uri)
   (let ((data `(("Authorization" . ,librato_basic_auth))))
     (web-http-get
@@ -94,15 +90,17 @@
      :extra-headers data
      )))
 
-(defun librato-fetch-metric-data (metric)
+(defun librato-fetch-metric-data (type metric)
   (lexical-let* ((data `(("Authorization" . ,librato_basic_auth)))
 		 (output-buffer (format "*librato-%s-data*" metric))
-		 (uri (format "https://metrics-api.librato.com/v1/metrics/%s?count=20&resolution=60" metric )))
+		 (uri (format "https://metrics-api.librato.com/v1/metrics/%s?count=100&resolution=60" metric)))
     (web-http-get
      (lambda (httpc header my-data)
        (with-output-to-temp-buffer output-buffer
          (switch-to-buffer-other-window output-buffer)
-	 (mapcar #'librato-print-metrics-data (cdr (assoc 'measurements (json-read-from-string my-data))))))
+	 (if (string= type "gauge")
+	     (mapcar #'librato-print-metrics-data-gauge (cdr (assoc 'measurements (json-read-from-string my-data))))
+	   (mapcar #'librato-print-metrics-data-counter (cdr (assoc 'measurements (json-read-from-string my-data)))))))
      :url uri
      :extra-headers data
      )))
@@ -120,7 +118,7 @@
        (type (cdr (assoc 'type element)))
        (display_name (cdr (assoc 'display_name element)))
        (name (cdr (assoc 'name element))))
-    (librato-create-link-for-metric "blue" name name)
+    (librato-create-link-for-metric type "blue" name name)
     ;;(insert (propertize (format "Name:%s " name) 'face '(:foreground "black")))
     (insert (propertize (format " Dispay:%s " display_name) 'face '(:foreground "darkgreen")))
     (insert (propertize (format "Descrip:%s " description) 'face '(:foreground "darkblue")))
@@ -132,7 +130,27 @@
     (insert (propertize (format "Type: %s " type) 'face '(:foreground "purple")))
     (princ "\n")))
 
-(defun librato-print-metrics-data (element)
+(defun librato-print-metrics-data-gauge (element)
+  (message "||| in gauge")
+  (let ((source (car element))
+	(data (cdr element))
+	(i 0)
+	(data-line '(0)))
+    (insert (propertize (format "%s " source 'face '(:foreground "darkgreen"))))
+    (while (< i (length data))
+      (let* ((datum (elt data i))
+	     (delta (cdr (assoc 'delta datum)))
+	     (measure_time (cdr (assoc 'measure_time datum)))
+	     (value (cdr (assoc 'value datum))))
+	(if value
+	    (nconc data-line (list value)))
+	(setq i (1+ i))))
+    ;;(insert (format " %s " data-line))
+    (insert (format " %s" (apply 'spark (cdr data-line))))
+    (princ "\n")))
+
+(defun librato-print-metrics-data-counter (element)
+  (message "||| in counter")
   (let ((source (car element))
 	(data (cdr element))
 	(i 0)
@@ -146,20 +164,21 @@
 	(if delta
 	    (nconc data-line (list delta)))
 	(setq i (1+ i))))
+    ;;(insert (format " %s " data-line))
     (insert (format " %s" (apply 'spark (cdr data-line))))
     (princ "\n")))
 
 (defun librato-print-message (element)
   (message "SSS: %s" element))
 
-(defun librato-create-link-for-metric (color title id)
+(defun librato-create-link-for-metric (type color title id)
   "Insert clickable string inside a buffer"
   (lexical-let ((color color)
 		(map (make-sparse-keymap)))
     (define-key map (kbd "<RET>")
-      #'(lambda (e) (interactive "p") (librato-fetch-metric-data id)))
+      #'(lambda (e) (interactive "p") (librato-fetch-metric-data type id)))
     (define-key map (kbd "<down-mouse-1>")
-      #'(lambda (e) (interactive "p") (librato-fetch-metric-data id)))
+      #'(lambda (e) (interactive "p") (librato-fetch-metric-data type id)))
     (insert
      (propertize
       title
