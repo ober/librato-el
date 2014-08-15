@@ -97,7 +97,7 @@
 (defun librato-fetch-metric-data (metric)
   (lexical-let* ((data `(("Authorization" . ,librato_basic_auth)))
 		 (output-buffer (format "*librato-%s-data*" metric))
-		 (uri (format "https://metrics-api.librato.com/v1/metrics/%s?count=100&resolution=60" metric )))
+		 (uri (format "https://metrics-api.librato.com/v1/metrics/%s?count=20&resolution=60" metric )))
     (web-http-get
      (lambda (httpc header my-data)
        (with-output-to-temp-buffer output-buffer
@@ -132,29 +132,22 @@
     (insert (propertize (format "Type: %s " type) 'face '(:foreground "purple")))
     (princ "\n")))
 
-
 (defun librato-print-metrics-data (element)
   (let ((source (car element))
 	(data (cdr element))
 	(i 0)
-	(deltas (list)))
+	(data-line '(0)))
     (insert (propertize (format "%s " source 'face '(:foreground "darkgreen"))))
-    ;;(insert (propertize (format "%s " (cdr element) 'face '(:foreground "darkgreen"))))
     (while (< i (length data))
       (let* ((datum (elt data i))
 	     (delta (cdr (assoc 'delta datum)))
 	     (measure_time (cdr (assoc 'measure_time datum)))
 	     (value (cdr (assoc 'value datum))))
-
-	(insert (format " measure_time:%s delta:%s" measure_time delta))
-
-	(nconc deltas (list delta))
+	(if delta
+	    (nconc data-line (list delta)))
 	(setq i (1+ i))))
-	;;(insert "||| size:%s type:%s raw:%s" (length data-line) (type-of data-line) data-line )
-	;;(insert (format "%s" (apply 'spark data-line)))
-	(insert (format "%s" data-line))
-	(princ "\n")))
-
+    (insert (format " %s" (apply 'spark (cdr data-line))))
+    (princ "\n")))
 
 (defun librato-print-message (element)
   (message "SSS: %s" element))
@@ -174,10 +167,10 @@
       'keymap map
       'mouse-face 'highlight))))
 
-
 (defun spark (&rest args)
-   (let* ((minimum (apply #'min args))
-          (maximum (apply #'max args))
-          (range (float (- maximum minimum)))
-          (sparks '("▁" "▂" "▃" "▄" "▅" "▆" "▇" "█")))
-     (mapconcat (lambda (n) (nth (floor (* (/ n range) 7)) sparks)) args " ")))
+  (message "WTF: args:%s raw:%s" (type-of args) args)
+  (let* ((minimum (apply #'min args))
+	 (maximum (apply #'max args))
+	 (range (float (- maximum minimum)))
+	 (sparks '("▁" "▂" "▃" "▄" "▅" "▆" "▇" "█")))
+    (mapconcat (lambda (n) (nth (floor (* (/ n range) 7)) sparks)) args " ")))
